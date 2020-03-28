@@ -46,7 +46,7 @@ use arrayvec::ArrayString;
 // globally accessible values
 static TEMP_C: Mutex<Cell<i16>> = Mutex::new(Cell::new(0i16));
 static TEMP_F: Mutex<Cell<i16>> = Mutex::new(Cell::new(0i16));
-static BUF: Mutex<Cell<[u16;5]>> = Mutex::new(Cell::new([0u16;5]));
+static BUF: Mutex<Cell<[u16;10]>> = Mutex::new(Cell::new([0u16;10]));
 
 // interrupt and peripheral for ADC
 
@@ -54,7 +54,6 @@ static TIMER_TIM3: Mutex<RefCell<Option<Timer<stm32::TIM3>>>> = Mutex::new(RefCe
 static GADC: Mutex<RefCell<Option<Adc<stm32::ADC1>>>> = Mutex::new(RefCell::new(None));
 static ANALOG: Mutex<RefCell<Option<PA3<Analog>>>> = Mutex::new(RefCell::new(None));
 
-//const FACTOR: f32 = 3300.0/4096.0; //3300 mV / 4096 values for 12-bit ADC
 const FACTOR: f32 = 3300.0/1024.0; //3300 mV / 1024 values for 10-bit ADC
 
 const BOOT_DELAY_MS: u16 = 100; //delay for the I2C to start correctly after power up
@@ -173,7 +172,7 @@ fn TIM3() {
             tim3.clear_interrupt(Event::TimeOut);
             let sample = adc.convert(analog, SampleTime::Cycles_480);
 
-            let mut buf = BUF.borrow(cs).get(); //get the current buffer
+            let buf = BUF.borrow(cs).get(); //get the current buffer
 
             let new_buf = circular(&buf, sample); //buffer update
 
@@ -232,24 +231,24 @@ fn formatter(buf: &mut ArrayString<[u8; 7]>, val: i16, unit: char) {
 }
 
 
-fn circular(buf: &[u16;5], val: u16) -> [u16;5] {
+fn circular(buf: &[u16;10], val: u16) -> [u16;10] {
 
     //simple circular buffer, first in first out
-    let mut new_buf: [u16;5] = [0u16;5];
+    let mut new_buf: [u16;10] = [0u16;10];
         
-    for i in 0..4 {
+    for i in 0..9 {
         new_buf[i] = buf[i+1];
     }
-    new_buf[4] = val;
+    new_buf[9] = val;
 
     return new_buf
 }
 
-fn average(buf: &[u16;5]) -> f32 {
+fn average(buf: &[u16;10]) -> f32 {
     //returns an average value of the buffer
     let mut total: u16 = 0u16;
     for i in buf.iter() {
         total += i;
     }
-    return total as f32 / 5.0
+    return total as f32 / 10.0
 }
