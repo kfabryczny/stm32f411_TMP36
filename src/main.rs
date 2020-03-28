@@ -54,7 +54,8 @@ static TIMER_TIM3: Mutex<RefCell<Option<Timer<stm32::TIM3>>>> = Mutex::new(RefCe
 static GADC: Mutex<RefCell<Option<Adc<stm32::ADC1>>>> = Mutex::new(RefCell::new(None));
 static ANALOG: Mutex<RefCell<Option<PA3<Analog>>>> = Mutex::new(RefCell::new(None));
 
-const FACTOR: f32 = 3300.0/4096.0; //3300 mV / 4096 values for 12-bit ADC
+//const FACTOR: f32 = 3300.0/4096.0; //3300 mV / 4096 values for 12-bit ADC
+const FACTOR: f32 = 3300.0/1024.0; //3300 mV / 1024 values for 10-bit ADC
 
 const BOOT_DELAY_MS: u16 = 100; //delay for the I2C to start correctly after power up
 
@@ -76,7 +77,7 @@ fn main() -> ! {
 
         //set up ADC
         let gpioa = dp.GPIOA.split();
-        let adcconfig = AdcConfig::default().clock(Clock::Pclk2_div_8).resolution(Resolution::Twelve);
+        let adcconfig = AdcConfig::default().clock(Clock::Pclk2_div_8).resolution(Resolution::Ten);
         let adc = Adc::adc1(dp.ADC1, true, adcconfig);
                 
         let pa3 = gpioa.pa3.into_analog();
