@@ -97,7 +97,7 @@ fn main() -> ! {
         let mut disp: GraphicsMode<_> = SSD1306Builder::new().size(DisplaySize::Display128x32).connect_i2c(i2c).into();
         disp.init().unwrap();
 
-        // set up timers and external interrupt
+        // set up timer and interrupts
         let mut adctimer = Timer::tim3(dp.TIM3, Hertz(1), clocks); //adc update every 1 s
         adctimer.listen(Event::TimeOut);
                 
