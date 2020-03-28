@@ -46,6 +46,7 @@ use arrayvec::ArrayString;
 // globally accessible values
 static TEMP_C: Mutex<Cell<i16>> = Mutex::new(Cell::new(0i16));
 static TEMP_F: Mutex<Cell<i16>> = Mutex::new(Cell::new(0i16));
+static BUF: Mutex<Cell<[u16;5]>> = Mutex::new(Cell::new([0u16;5]));
 
 // interrupt and peripheral for ADC
 
@@ -170,8 +171,16 @@ fn TIM3() {
         {
             tim3.clear_interrupt(Event::TimeOut);
             let sample = adc.convert(analog, SampleTime::Cycles_480);
+
+            let mut buf = BUF.borrow(cs).get(); //get the current buffer
+
+            let new_buf = circular(&buf, sample); //buffer update
+
+            BUF.borrow(cs).replace(new_buf); //update the global buffer
+
+            let avg_sample = average(&new_buf);
             
-            let voltage = sample as f32 * FACTOR; //ADC reading converted to milivolts
+            let voltage = avg_sample * FACTOR; //ADC reading converted to milivolts
 
             //the common formula is (milivolts - 500) / 10
             //10mV per Celsius degree with 500 mV offset
@@ -195,11 +204,14 @@ fn TIM3() {
 }
 
 
-// helper function for the display
+
 
 fn formatter(buf: &mut ArrayString<[u8; 7]>, val: i16, unit: char) {   
-    
-    let mut sign: char = 43 as char; //default + sign
+    // helper function for the display    
+    // takes a mutable text buffer, value and unit symbol as arguments
+    // default sign is + (43 in ASCII)
+    // in order to correctly handle negative values, their sign has to be reversed before splitting into digits
+    let mut sign: char = 43 as char; 
     
     if val < 0 {
         sign = 45 as char;
@@ -207,7 +219,7 @@ fn formatter(buf: &mut ArrayString<[u8; 7]>, val: i16, unit: char) {
     
     let mut new_val = val;
     if val < 0 {
-        new_val *= -1; // for values below zero they need to be made positive for a correct handling of digits
+        new_val *= -1; 
     }
 
     let tenths = new_val%10;
@@ -216,4 +228,27 @@ fn formatter(buf: &mut ArrayString<[u8; 7]>, val: i16, unit: char) {
                 
     fmt::write(buf, format_args!("{}{}{}.{} {}", sign, tens as u8, singles as u8, tenths as u8, unit)).unwrap();
 
+}
+
+
+fn circular(buf: &[u16;5], val: u16) -> [u16;5] {
+
+    //simple circular buffer, first in first out
+    let mut new_buf: [u16;5] = [0u16;5];
+        
+    for i in 0..4 {
+        new_buf[i] = buf[i+1];
+    }
+    new_buf[4] = val;
+
+    return new_buf
+}
+
+fn average(buf: &[u16;5]) -> f32 {
+    //returns an average value of the buffer
+    let mut total: u16 = 0u16;
+    for i in buf.iter() {
+        total += i;
+    }
+    return total as f32 / 5.0
 }
