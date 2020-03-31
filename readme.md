@@ -14,3 +14,5 @@ Improved following the STMicroelectronics Application Note AN4073 "How to improv
 then averaging the remaining 8.
 
 "Presentation logic": to make the displayed value more stable for the user, average the last 8 temperature values.
+
+![](thermometer.jpg)
