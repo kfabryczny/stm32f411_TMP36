@@ -217,16 +217,11 @@ fn TIM3() {
             }
 
             //sort the buffer and drop the four most dispersed values
-            sort(&mut adc_buf); 
-
-            let mut adc_buf_trimmed: [u16;8] = [0u16;8];
-            for k in 0..8 {
-                adc_buf_trimmed[k] = adc_buf[k+2];
-            }
+            adc_buf.sort_unstable();
             
             //average the remaining 8 values
-            let sample = average(&adc_buf_trimmed);
-
+            let sample = average(&adc_buf[2..10]);
+            
             //update the global buffer with the new sample
             let buf = BUF.borrow(cs).get();
             let new_buf = circular(&buf, sample);
@@ -234,7 +229,7 @@ fn TIM3() {
 
              //get the average of the current global buffer
             let avg_sample = average(&new_buf);
-            
+                        
             //ADC reading converted to milivolts, then to Celsius degrees
             //the common formula is (milivolts - 500) / 10
             //10mV per Celsius degree with 500 mV offset
@@ -344,33 +339,12 @@ fn circular(buf: &[u16;8], val: u16) -> [u16;8] {
 
 
 //simple average function, averages the 8 values by shifting right by 3 bits
-fn average(buf: &[u16;8]) -> u16 {
+
+fn average(buf: &[u16]) -> u16 {
 
     let mut total: u16 = 0u16;
     for i in buf.iter() {
         total += i;
     }
     return total >> 3;
-}
-
-//sort function for implementing the Averaging of N-X ADC samples technique
-//from STM Application Note AN4073 "How to improve ADC accuracy"
-
-fn sort(arr: &mut [u16;12]) {
-    
-    let mut exchange: u8 = 1;
-    let mut tmp: u16 = 0;
-
-    while exchange == 1 {
-        exchange = 0;
-        for idx in 0..11 {
-            if arr[idx] > arr[idx+1] {
-                tmp = arr[idx];
-                arr[idx] = arr[idx+1];
-                arr[idx+1] = tmp;
-                exchange = 1;
-            }
-        }
-        
-    }
 }
